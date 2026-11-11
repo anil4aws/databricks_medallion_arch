@@ -1,0 +1,72 @@
+####### framework for streaming 
+
+enterprise-data-platform/
+├── databricks.yml                  # Root DAB configuration (targets: dev, staging, prod)
+├── pyproject.toml                  # Python dependencies & wheel build config
+├── metadata/                       # Metadata configs (synced to control_catalog or Volumes)
+│   ├── control_tables/             # DDL for control_catalog (pipeline_config, dq_rules)
+│   └── pipelines/
+│       ├── sales_domain.yaml       # Source-to-target mappings, watermarks, DQ expectations
+│       └── customer_domain.yaml
+├── resources/                      # DAB resource definitions (Jobs, Pipelines, Schemas)
+│   ├── catalogs_and_schemas.yml    # Unity Catalog definitions (bronze, silver, gold, control)
+│   ├── ingestion_workflows.yml     # Databricks Workflows calling the ingestion engine
+│   └── medallion_pipelines.yml     # Lakeflow Declarative Pipelines (DLT) definitions
+├── src/
+│   └── platform_core/              # Reusable Python wheel package
+│       ├── __init__.py
+│       ├── config_loader.py        # Reads metadata from control_catalog or YAML
+│       ├── dq_engine.py            # Applies dynamic Data Quality rules
+│       ├── bronze_ingestor.py      # Metadata-driven Auto Loader engine
+│       └── silver_transformer.py   # Dynamic deduplication, SCD Type 1/2, & casting
+└── tests/                          # Pytest & Chispa unit tests
+    ├── test_bronze_ingestor.py
+    └── test_silver_transformer.py
+    
+## I want to create for just batch processing 
+
+enterprise-data-platform/
+├── databricks.yml                  # Root DAB config (targets: dev, staging, prod)
+├── pyproject.toml                  # Python wheel build & dependencies (requests, tenacity, pyyaml)
+├── metadata/
+│   ├── control_ddl/
+│   │   └── setup_control_tables.sql # DDLs for pipeline_config, watermarks, & audit_logs
+│   └── pipelines/
+│       ├── erp_adls_sales.yaml     # ADLS batch file ingestion & Silver/Gold rules
+│       └── crm_api_customers.yaml  # REST API batch ingestion & Silver/Gold rules
+├── resources/
+│   ├── catalogs.yml                # Unity Catalogs: bronze_catalog, silver_catalog, gold_catalog, control_catalog
+│   └── batch_workflows.yml         # Scheduled Databricks Jobs (Bronze -> Silver -> Gold tasks)
+├── src/
+│   └── platform_core/
+│       ├── __init__.py
+│       ├── watermark_manager.py    # Reads/updates incremental watermarks in control_catalog
+│       ├── adls_batch_ingestor.py  # Batch file reader (Parquet/CSV/JSON) via UC External Locations
+│       ├── api_batch_ingestor.py   # Resilient REST API client (retries, pagination, Secrets)
+│       ├── silver_batch_engine.py  # Batch deduplication, DQ checks, & Delta MERGE (SCD1/SCD2)
+│       └── gold_batch_engine.py    # SQL/PySpark dimensional & fact table aggregations
+└── tests/
+    ├── test_api_ingestor.py
+    └── test_silver_merge.py
+
+#### True Metadata-Driven Folder Structure
+
+enterprise-data-platform/
+├── databricks.yml                      # Root DAB configuration (dev, staging, prod)
+├── pyproject.toml                      # Python wheel build config
+├── bootstrap/                          # Run once during environment setup
+│   └── 01_create_control_tables.sql    # DDLs for pipeline_metadata, watermarks, & audit_logs
+├── resources/
+│   ├── catalogs.yml                    # bronze_catalog, silver_catalog, gold_catalog, control_catalog
+│   └── metadata_batch_job.yml          # Single generic Databricks Job orchestrating all pipelines
+├── src/
+│   └── platform_core/
+│       ├── __init__.py
+│       ├── main.py                     # CLI entry points (run_bronze, run_silver, run_gold)
+│       ├── metadata_repository.py      # Queries control_catalog.governance.pipeline_metadata
+│       ├── adls_ingestor.py            # Generic ADLS batch reader
+│       ├── api_ingestor.py             # Generic REST API batch reader
+│       ├── silver_engine.py            # Generic DQ, deduplication, & Delta MERGE engine
+│       └── gold_engine.py              # Executes dynamic Gold SQL/transformations from metadata
+└── tests/
+    └── test_metadata_engine.py
