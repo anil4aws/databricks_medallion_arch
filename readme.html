@@ -1,0 +1,39 @@
+<html>
+<data>
+## which folder structure to follow ?
+
+
+Writing the file to a storage location from Databricks 
+
+pre-requisites 
+1. Create Managed identity in azure with storage blob contributor to the managed identity 
+2. Access connector for Databricks , add id created first step
+3. Create the credentials in Databricks
+4. Create the external location using Databricks
+
+Note : An external location will be created by default when a Databricks workspace was created 
+and storage location / unit catalog space also but for the project we are advised to use different 
+
+Use below script to create the storage credentials 
+
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.catalog import AzureManagedIdentityRequest
+from databricks.sdk.errors import ResourceAlreadyExists
+
+w = WorkspaceClient()
+
+try:
+    cred = w.storage_credentials.create(
+        name=STORAGE_CREDENTIAL_NAME,
+        azure_managed_identity=AzureManagedIdentityRequest(
+            access_connector_id=ACCESS_CONNECTOR_ID,
+            managed_identity_id=MANAGED_IDENTITY_ID,  # omit if the connector uses its system-assigned identity
+        ),
+        comment="Dev ADLS saedpdev via id-edp-dev-access-connector",
+    )
+    print(f"Created storage credential {cred.name}")
+except ResourceAlreadyExists:
+    print(f"Storage credential {STORAGE_CREDENTIAL_NAME} already exists")
+</data>
+  
+</html>
